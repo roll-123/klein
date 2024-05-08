@@ -86,6 +86,7 @@ public:
     rotor(euler_angles ea) noexcept
     {
         // https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles#cite_note-3
+#if defined(KLEIN_ROTOR_EULER_2_QUAT_FLOAT)
         float half_yaw   = ea.yaw * 0.5f;
         float half_pitch = ea.pitch * 0.5f;
         float half_roll  = ea.roll * 0.5f;
@@ -100,6 +101,47 @@ public:
                          cos_r * sin_p * cos_y + sin_r * cos_p * sin_y,
                          sin_r * cos_p * cos_y - cos_r * sin_p * sin_y,
                          cos_r * cos_p * cos_y + sin_r * sin_p * sin_y);
+
+#elif defined(KLEIN_ROTOR_EULER_2_QUAT_DOUBLE)
+        // Same as above, but using double precision
+        double half_yaw   = ea.yaw * 0.5;
+        double half_pitch = ea.pitch * 0.5;
+        double half_roll  = ea.roll * 0.5;
+        double cos_y      = std::cos(half_yaw);
+        double sin_y      = std::sin(half_yaw);
+        double cos_p      = std::cos(half_pitch);
+        double sin_p      = std::sin(half_pitch);
+        double cos_r      = std::cos(half_roll);
+        double sin_r      = std::sin(half_roll);
+
+        p1_ = _mm_set_ps(float(cos_r * cos_p * sin_y - sin_r * sin_p * cos_y),
+                         float(cos_r * sin_p * cos_y + sin_r * cos_p * sin_y),
+                         float(sin_r * cos_p * cos_y - cos_r * sin_p * sin_y),
+                         float(cos_r * cos_p * cos_y + sin_r * sin_p * sin_y));
+
+#else
+        // Use trigonometric product identities to make the calculations more stable
+        // https://en.wikipedia.org/wiki/List_of_trigonometric_identities#Product-to-sum_and_sum-to-product_identities
+        const float half_yaw   = ea.yaw * 0.5f;
+        const float half_pitch = ea.pitch * 0.5f;
+        const float half_roll  = ea.roll * 0.5f;
+        const float cos_y      = std::cos(half_yaw);
+        const float sin_y      = std::sin(half_yaw);
+
+        const float cos_r_m_p = std::cos(half_roll - half_pitch);
+        const float cos_r_p_p = std::cos(half_roll + half_pitch);
+        const float sin_r_p_p = std::sin(half_roll + half_pitch);
+        const float sin_r_m_p = std::sin(half_roll - half_pitch);
+
+        const float cos_r_X_cos_p = 0.5f * (cos_r_m_p + cos_r_p_p);
+        const float sin_r_X_cos_p = 0.5f * (sin_r_p_p + sin_r_m_p);
+        const float sin_r_X_sin_p = 0.5f * (cos_r_m_p - cos_r_p_p);
+        const float cos_r_X_sin_p = 0.5f * (sin_r_p_p - sin_r_m_p);
+        p1_ = _mm_set_ps(cos_r_X_cos_p * sin_y - sin_r_X_sin_p * cos_y,
+                         cos_r_X_sin_p * cos_y + sin_r_X_cos_p * sin_y,
+                         sin_r_X_cos_p * cos_y - cos_r_X_sin_p * sin_y,
+                         cos_r_X_cos_p * cos_y + sin_r_X_sin_p * sin_y);
+#endif
         normalize();
     }
 
