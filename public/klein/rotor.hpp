@@ -245,6 +245,7 @@ public:
         euler_angles ea;
         float buf[4];
         store(buf);
+#ifdef KLEIN_REF_QUAT_2_EULER
         float test = buf[1] * buf[2] + buf[3] * buf[0];
 
         if (test > 0.4999f)
@@ -282,6 +283,40 @@ public:
         ea.yaw = std::atan2(
             2 * (buf[0] * buf[3] + buf[1] * buf[2]), 1 - 2 * (buf2_2 + buf3_2));
         return ea;
+#else
+        // https://www.researchgate.net/publication/365295317_Quaternion_to_Euler_angles_conversion_A_direct_general_and_computationally_efficient_method
+        // Simplified version of the above link. Only handle XYZ order which is what the ref impl does.
+
+        const float a = buf[0] - buf[2];
+        const float b = buf[1] + buf[3];
+        const float c = buf[2] + buf[0];
+        const float d = buf[3] - buf[1];
+
+        const float y2 = std::acos(
+            2.0f * (a * a + b * b) / (a * a + b * b + c * c + d * d) - 1.0f);
+
+        const float theta_plus  = std::atan2(b, a);
+        const float theta_minus = std::atan2(-d, c);
+
+        const float eps = 1e-5f;
+        if (std::abs(y2) < eps)
+        {
+            ea.yaw  = 2 * theta_plus;
+            ea.roll = 0;
+        }
+        else if (std::abs(y2 - pi) < eps)
+        {
+            ea.yaw  = -2 * theta_minus;
+            ea.roll = 0;
+        }
+        else
+        {
+            ea.yaw  = theta_plus - theta_minus;
+            ea.roll = theta_plus + theta_minus;
+        }
+        ea.pitch = y2 - pi_2;
+        return ea;
+#endif
     }
 
     /// Conjugates a plane $p$ with this rotor and returns the result
