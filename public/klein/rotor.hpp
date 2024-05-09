@@ -86,7 +86,7 @@ public:
     rotor(euler_angles ea) noexcept
     {
         // https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles#cite_note-3
-#if defined(KLEIN_ROTOR_EULER_2_QUAT_FLOAT)
+#if defined(KLEIN_REF_ROTOR_EULER_2_QUAT_FLOAT)
         float half_yaw   = ea.yaw * 0.5f;
         float half_pitch = ea.pitch * 0.5f;
         float half_roll  = ea.roll * 0.5f;
@@ -102,7 +102,7 @@ public:
                          sin_r * cos_p * cos_y - cos_r * sin_p * sin_y,
                          cos_r * cos_p * cos_y + sin_r * sin_p * sin_y);
 
-#elif defined(KLEIN_ROTOR_EULER_2_QUAT_DOUBLE)
+#elif defined(KLEIN_REF_ROTOR_EULER_2_QUAT_DOUBLE)
         // Same as above, but using double precision
         double half_yaw   = ea.yaw * 0.5;
         double half_pitch = ea.pitch * 0.5;
